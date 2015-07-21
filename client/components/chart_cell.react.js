@@ -32,7 +32,9 @@ var ChartCell = React.createClass({
     },
 
     render: function() {
-        var contentClass = 'chart-stage ' + this.props.layoutState.height;
+        var computedStyles = {
+            height: this.props.layoutState.height
+        };
 
         return (
             <div className="chart-wrapper">
@@ -41,7 +43,7 @@ var ChartCell = React.createClass({
                     type="text"
                     placeholder="ticker symbol" />
               </div>
-              <div className={contentClass}>
+              <div className="chart-stage" style={computedStyles}>
               </div>
             </div>
         );

@@ -4,7 +4,7 @@ var React           = require('react'),
     dvConst         = require('../constants/data_view'),
 
     dataViewActions = require('../actions/data_view_action_creator'),
-    dataViewStore   = require('../stores/data_view_store'),
+    dataViewStore   = require('../stores/data_view_store').DataViewStore,
 
 
     dataViewChartActions = require('../actions/data_view_chart_action_creator'),
@@ -40,12 +40,8 @@ var DataView = React.createClass({
               <div className="chart-title data-view-chart-title">
 
                 {this.renderPositionButton()}
-                {this.renderChartButton()}
+                {this.renderDropChartButton()}
                 {this.renderTradeButton()}
-
-                <div className="pull-right data-view-context">
-                    {this.renderContext()}
-                </div>
 
               </div>
 
@@ -141,6 +137,55 @@ var DataView = React.createClass({
         );
     },
 
+    renderDropChartButton: function () {
+        var self = this,
+            classMainBtnStr = 'btn btn-default btn-data-view-drop',
+            classDropBtnStr = 'btn btn-default dropdown-toggle btn-data-view';
+
+        if(this.state.view === dvConst.views.TRADE) {
+            classMainBtnStr += ' active';
+            classDropBtnStr += ' active';
+        }
+
+        var links = _.map(dvConst.chartGridContext, function (e) {
+            return (
+                <li key={e}>
+                    <a
+                        id={e}
+                        href="#"
+                        onClick={self._onChartDropLayoutClick}>
+                        {e.split('_')[1]}
+                    </a>
+                </li>
+            );
+        });
+
+        return (
+
+            <div className="btn-group">
+
+              <button
+                type="button"
+                className={classMainBtnStr}
+                onClick={this._onChartClick}>Chart</button>
+
+              <button
+                type="button"
+                className={classDropBtnStr}
+                data-toggle="dropdown"
+                aria-haspopup="true"
+                aria-expanded="false">
+                <span className="caret"></span>
+                <span className="sr-only">Toggle Dropdown</span>
+              </button>
+
+              <ul className="dropdown-menu">
+                {links}
+              </ul>
+            </div>
+        );
+    },
+
     renderTradeButton: function () {
         var classStr = 'btn btn-default btn-data-view';
 
@@ -155,52 +200,10 @@ var DataView = React.createClass({
         );
     },
 
-    renderContext: function () {
-        switch(this.state.view) {
-            case dvConst.views.POSITION:
-                return this.renderPositionContext();
-            break;
-
-            case dvConst.views.TRADE:
-                return this.renderTradeContext();
-            break;
-
-            default: // CHART
-                return this.renderChartContext();
-
-        }
-    },
-
-    renderPositionContext: function () {
-        return (
-            <div className="data-view-context-postion"></div>
-        );
-    },
-
-    renderChartContext: function () {
-        var options = _.map(dvConst.chartGridContext, function (e) {
-            return (<option key={e} value={e}>{e.split('_')[1]}</option>);
-        });
-
-        return (
-            <div className="data-view-context-chart">
-                <select
-                    value={this.state.chartContext.layoutType}
-                    onChange={this._onChartLayoutChange}>
-                    {options}
-                </select>
-            </div>
-        );
-    },
-
-    renderTradeContext: function () {
-        return (
-            <div className="data-view-context-trade"></div>
-        );
-    },
-
-    _onChartLayoutChange: function (e) {
-        dataViewActions.changeChartLayout(e.target.value);
+    _onChartDropLayoutClick: function (e) {
+        e.preventDefault();
+        dataViewActions.changeChartLayout(e.target.id);
+        console.log(e.target.id);
     },
 
     _onPositionClick: function () {

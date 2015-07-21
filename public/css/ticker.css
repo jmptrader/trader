@@ -28,6 +28,10 @@
     margin-right: 2px;
 }
 
+.btn-data-view-drop {
+    padding: 0px 6px;
+}
+
 .data-view-context-chart {
     padding-top: 1px;
 }
@@ -38,16 +42,4 @@
 
 .chart-cell {
     min-height: 250px;
-}
-
-.cell-height-1-row {
-    min-height: 500px;
-}
-
-.cell-height-2-row {
-    min-height: 250px;
-}
-
-.cell-height-3-row {
-    min-height: 125px;
 }
