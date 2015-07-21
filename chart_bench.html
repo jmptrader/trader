@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF8">
+    <title></title>
+    <style>
+        /* tell the SVG path to be a thin blue line without any area fill */
+        path {
+            stroke: steelblue;
+            stroke-width: 1;
+            fill: none;
+        }
+
+        .axis path,
+        .axis line {
+          fill: none;
+          stroke: black;
+          shape-rendering: crispEdges;
+        }
+
+        .x.axis path {
+          display: none;
+        }
+
+        .inner-chart-data-area {
+            fill: steelblue;
+            stroke: none;
+            opacity: 0.1;
+        }
+
+        .focusLine {
+            fill: none;
+            stroke: steelblue;
+            stroke-width: 0.5px;
+        }
+
+        .focusCircle {
+            fill: red;
+        }
+
+        .overlay {
+            fill: none;
+            stroke: none;
+            pointer-events: all;
+        }
+    </style>
+</head>
+<body>
+
+
+    <div id="chart">
+        <p>ok</p>
+    </div>
+
+    <script src="/js/underscore.js"></script>
+    <script src="vendor/jquery/jquery.min.js"></script>
+    <script src="vendor/moment/moment.js"></script>
+    <script src="http://d3js.org/d3.v3.js"></script>
+
+    <script>
+
+        var domId = '#chart',
+            // note how this matches the DOM elements width
+            chartContainerWidth = 960,
+            // note how this matches the DOM elements height
+            chartContainerHeight = 500,
+            // chart margins
+            chartMargin = { top: 20, right: 80, bottom: 30, left: 50 },
+            // chart width with margins
+            computedWidth = chartContainerWidth - chartMargin.left - chartMargin.right,
+            //chart height with margins
+            computedHeight = chartContainerHeight - chartMargin.top - chartMargin.bottom,
+            // wavy or smooth
+            interpolation = 'basis';
+
+        $(function () {
+            d3.csv('/vendor/stock/ndx_small.csv', function (data) {
+
+                // create date parser according to format
+                var dateParser = d3.time.format('%m/%d/%Y').parse;
+
+                // parse the date
+                data.forEach(function (d, i) {
+                    d.date = dateParser(d.date);
+                    d.close = +d.close;
+                });
+
+                // maps x variables (as index) to chart position
+                var xIdx = d3.time.scale()
+                             .domain([0, data.length])
+                             .range([0, computedWidth]);
+
+                // maps x (as date) variables to chart position
+                var x = d3.time.scale()
+                          .domain(d3.extent(data, function(d) { return d.date; }))
+                          .range([0, computedWidth]);
+
+                // maps y variable to chart position
+                var y = d3.scale.linear()
+                          .domain([
+                            d3.min(data, function(d) { return d.close; }),
+                            d3.max(data, function(d) { return d.close; })
+                          ])
+                          .range([computedHeight, 0]);
+
+                // make and orient x axis
+                var xAxis = d3.svg.axis()
+                              .scale(x)
+                              .orient("bottom");
+
+                // make and orient y axis
+                var yAxis = d3.svg.axis()
+                              .scale(y)
+                              .orient("left");
+
+                // create the function that constructs the line
+                var lineIdx = d3.svg.line()
+                                .interpolate(interpolation)
+                                .x(function (d, i) { return xIdx(i); })
+                                .y(function (d) { return y(d.close); });
+
+                // create the function that constructs the line
+                var line = d3.svg.line()
+                             .interpolate(interpolation)
+                             .x(function (d) { return x(d.date); })
+                             .y(function (d) { return y(d.close); });
+
+                // create the function that constructs the area under the line
+                var area = d3.svg.area()
+                             .interpolate(interpolation)
+                             .x(function(d, i) { return xIdx(i); })
+                             .y0(function(d) { return y(d.close); })
+                             .y1(computedHeight);
+
+                // render the base graph
+                var graph = d3
+                    .select(domId)
+                    .append("svg")
+                        .attr("width", computedWidth)
+                        .attr("height", computedHeight + chartMargin.top + chartMargin.bottom)
+                        .append("g")
+                            .attr("class", "inner-chart")
+                            .attr("width", computedWidth)
+                            .style("overflow", "hidden")
+                            .attr("transform", "translate(" + chartMargin.left + "," + chartMargin.top + ")");
+
+                // render the x axis onto the graph
+                graph.append("g")
+                     .attr("class", "x axis")
+                     .attr("transform", "translate(0," + computedHeight + ")")
+                     .call(xAxis);
+
+                // render the y axis onto the graph
+                graph.append("g")
+                     .attr("class", "y axis")
+                     .call(yAxis);
+
+                // render initial chart data line
+                graph.append("g")
+                        .attr("class", "g-chart-data")
+                     .append("path")
+                        .attr("class", "inner-chart-data")
+                        .attr("d", lineIdx(data));
+
+                // render initial chart data area (under line)
+                graph.append("g")
+                        .attr("class", "g-chart-data-area")
+                     .append("path")
+                        .attr("class", "inner-chart-data-area")
+                        .attr('d', area(data));
+
+
+                // render crosshair readout
+                var readoutAxis = graph.append("g")
+                                        .attr("class", "g-chart-readout");
+
+                // set readout of x axis variable
+                var readoutX = readoutAxis.append("text")
+                           .attr("class", "g-chart-readout-x-data")
+                           .attr("transform", "translate(15, 0)")
+                           .text("date: N/A");
+
+                // set text readout of y axis variable
+                var readoutY = readoutAxis.append("text")
+                           .attr("class", "g-chart-readout-y-data")
+                           .attr("transform", "translate(15, 25)")
+                           .text("close: N/A");
+
+                // create focus crosshair
+                var focus = graph.append('g').style('display', 'none');
+
+                focus.append('line')
+                    .attr('id', 'focusLineX')
+                    .attr('class', 'focusLine');
+
+                focus.append('line')
+                    .attr('id', 'focusLineY')
+                    .attr('class', 'focusLine');
+
+                focus.append('circle')
+                    .attr('id', 'focusCircle')
+                    .attr('r', 5)
+                    .attr('class', 'circle focusCircle');
+
+                var mouseState = {
+                    isOver: false,
+                    x: null,
+                    y: null
+                };
+
+                function drawReadoutData(xPropName, xValue, yPropName, yValue) {
+                    readoutX.text(xPropName + " : " + moment(xValue).format("L"));
+                    readoutY.text(yPropName + " : " + yValue);
+                }
+
+                function displayMaxXY() {
+                    var maxX = d3.extent(data, function(d) { return d.date; })[1];
+                    var maxY = d3.extent(data, function(d) { return d.close; })[1];
+
+                    drawReadoutData("date", maxX, "close", maxY);
+                }
+
+                function displayXp1Y() {
+                    var mouseDate = x.invert(mouseState.x),
+                        mouseValue = y.invert(mouseState.y);
+
+                    var timeP1 = moment(mouseDate).add(1, 'day')._d;
+
+                    drawReadoutData("date", timeP1, "close", mouseValue);
+                }
+
+                graph.append('rect')
+                     .attr('class', 'overlay')
+                     .attr('width', computedWidth)
+                     .attr('height', computedHeight)
+                     .on('mouseover', function() {
+                          mouseState.isOver = true;
+                          focus.style('display', null);
+                      })
+                     .on('mouseout', function() {
+                          mouseState.isOver = false;
+                          focus.style('display', 'none');
+                      })
+                     .on('mousemove', function() {
+
+                          var mouse = d3.mouse(this);
+
+                          mouseState.x = mouse[0];
+                          mouseState.y = mouse[1];
+
+
+                          var mouse = d3.mouse(this),
+                              mouseDate = x.invert(mouse[0]),
+                              mouseValue = y.invert(mouse[1]);
+
+                          var xScaleValue = mouse[0];
+                          var yScaleValue = mouse[1];
+
+                          focus.select('#focusCircle')
+                              .attr('cx', xScaleValue)
+                              .attr('cy', yScaleValue);
+
+                          focus.select('#focusLineX')
+                              .attr('x1', xScaleValue).attr('y1', computedHeight)
+                              .attr('x2', xScaleValue).attr('y2', 0);
+
+                          focus.select('#focusLineY')
+                              .attr('x1', 0).attr('y1', yScaleValue)
+                              .attr('x2', computedWidth).attr('y2', yScaleValue);
+
+                          drawReadoutData("date", mouseDate, "close", mouseValue);
+                     });
+
+
+
+
+                function redrawWithAnimation() {
+                    // update with animation
+
+                    graph.selectAll("path.inner-chart-data")
+                         .data([data])
+                         .attr("d", lineIdx);
+
+                    graph.selectAll("path.inner-chart-data-area")
+                         .data([data])
+                         .attr("d", area);
+
+                    x.domain(d3.extent(data, function(d) { return d.date; }));
+
+                    xAxis = d3.svg.axis()
+                                  .scale(x)
+                                  .orient("bottom");
+
+                    graph.selectAll('g.x.axis')
+                         .call(xAxis);
+
+                    // note: if we get a new maximum y,
+                    // we have to redraw the entire visualization,
+
+
+                    // if the mouse is over the chart
+                    // dispay the y value as normal
+                    // display the x value is the current xvalue + 1 timestep
+                    if(mouseState.isOver) {
+                        displayXp1Y();
+                    }
+                    // if the mouse is not over the chart
+                    // display the max y and max x
+                    else {
+                        displayMaxXY();
+                    }
+                }
+
+                window.graph = graph;
+                window.comph = computedHeight;
+                window.xa = xAxis;
+
+                var maxdate = d3.extent(data, function(d) { return d.date; })[1];
+
+
+                var triggerCnt = 0;
+
+                setInterval(function() {
+                    var v = data.shift();
+
+                    var newdate = moment(maxdate).add(1, 'day')._d;
+
+                    maxdate = newdate;
+
+                    v.date = newdate;
+
+                    //console.log(v);
+
+                    data.push(v);
+
+                    redrawWithAnimation();
+                }, 1000);
+
+
+            /*
+             *
+             * a symbol is searched on
+             *
+             * display loading
+             *
+             * check if exists: yes -> continue
+             *                  no: -> stop loader, display error
+             *
+             * async do:
+             *   subscribe to ticker an start accepting real time. store in a buffer
+             *   make a request for the historicals
+             *
+             * onHistoricalsReceived:
+             *   merge with realtime buffer, render chart
+             *
+             */
+
+            });
+        });
+    </script>
+</body>
+</html>

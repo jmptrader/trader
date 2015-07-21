@@ -1,0 +1,53 @@
+.watch-list-input {
+    max-width: 75px;
+    border: none;
+}
+
+.watch-list-option {
+    cursor: pointer;
+    margin-right: 5px;
+}
+
+.watch-list-caret {
+    cursor: pointer;
+}
+
+.watch-list-option-selection {
+    position: relative;
+    width: 157px;
+    height: 35px;
+    background-color: black;
+    /*
+    left: 91px;
+    top: 36px;*/
+    z-index: 10000;
+}
+
+.btn-data-view {
+    padding: 0px 6px;
+    margin-right: 2px;
+}
+
+.data-view-context-chart {
+    padding-top: 1px;
+}
+
+.data-view-chart-title {
+    padding-top: 5px !important;
+}
+
+.chart-cell {
+    min-height: 250px;
+}
+
+.cell-height-1-row {
+    min-height: 500px;
+}
+
+.cell-height-2-row {
+    min-height: 250px;
+}
+
+.cell-height-3-row {
+    min-height: 125px;
+}
